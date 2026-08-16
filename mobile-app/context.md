@@ -31,11 +31,13 @@ Validation đã chạy:
 - mobile và dashboard typecheck pass
 - mobile và dashboard production web build pass
 - `cap sync android` pass
+- Android SDK Platform 35/Build Tools 35.0.0 installed và `assembleDebug` pass
+- debug APK signature v1/v2 verified
 - production build từ chối `VITE_COMMISSIONING_MODE=mock`
 
 Giới hạn validation hiện tại:
 
-- Android APK/Gradle build chưa chạy vì máy chưa có Android SDK hoặc `ANDROID_HOME`; JDK 21 đã có
+- debug APK đã build và verify; chưa cài/chạy smoke test trên Android phone
 - Kotlin secure session plugin chưa được instrumentation-test trên Android device
 - chưa flash hoặc HIL với ESP32-C6 application node
 - chưa có BLE ICD, native Matter controller artifact, claim registry/API hoặc BBB commissioning RPC
@@ -601,7 +603,7 @@ Vue layer owns presentation, not Matter cryptography.
 - `SecureSessionPlugin.kt` đã implement AES/GCM/NoPadding với Android Keystore, backup app bị disable
 - token web development chỉ ở memory; không dùng localStorage
 - Kotlin plugin được register trong `MainActivity`
-- Gradle build chưa được xác nhận do không có Android SDK/`ANDROID_HOME` trên host
+- Android SDK API 35 đã cài tại `%LOCALAPPDATA%/Android/Sdk`; Gradle `assembleDebug` đã pass với JDK 21
 - connectedhomeip, Android BLE, CameraX, Coroutines/StateFlow commissioning code và Matter native bridge chưa có
 
 ## 19. iOS implementation
@@ -867,7 +869,7 @@ Còn thiếu để đóng Phase A production:
 - release dashboard commit chứa mobile auth
 - deploy và smoke test BFF mobile auth tại `dashboard.rhophi.uk`
 - cấu hình `MOBILE_ALLOWED_ORIGINS=https://localhost` khi deploy nếu không dùng default
-- cài Android SDK, Gradle assembleDebug, cài APK trên phone
+- cài debug APK và smoke test trên phone thật
 - Android instrumentation test cho Keystore persistence/app restart
 - kiểm tra authenticated SSE và command round-trip từ phone thật
 

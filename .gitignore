@@ -1,0 +1,12 @@
+.embedder/
+node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+**/android/.gradle/
+**/android/local.properties
+**/*.jks
+**/*.keystore
+.env
+.env.*
+!.env.example

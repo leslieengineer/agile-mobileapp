@@ -1,0 +1,18 @@
+:root {
+  --ion-color-primary: #27d3c2;
+  --ion-color-primary-rgb: 39, 211, 194;
+  --ion-background-color: #07131f;
+  --ion-background-color-rgb: 7, 19, 31;
+  --ion-text-color: #edf8f7;
+  --ion-card-background: #102433;
+}
+
+body { background: radial-gradient(circle at top, #12384a, #07131f 48%); }
+ion-content::part(background) { background: transparent; }
+.page { max-width: 880px; margin: 0 auto; padding: 16px; }
+.eyebrow { color: #57e3d5; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+.muted { color: #93a9b5; }
+.error { color: #ff9aa9; }
+.mock-banner { background: #684d06; color: #fff2bd; padding: 10px 16px; text-align: center; font-weight: 700; }
+.card-grid { display: grid; gap: 14px; }
+@media (min-width: 720px) { .card-grid { grid-template-columns: 1fr 1fr; } }

@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/client-sdk" },
+    { "path": "apps/mobile" }
+  ]
+}

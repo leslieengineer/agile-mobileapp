@@ -1,0 +1,25 @@
+{
+  "name": "agile-mobileapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "npm run build -w @rhophi/client-sdk && npm run build -w @rhophi/mobile",
+    "typecheck": "npm run build -w @rhophi/client-sdk && npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "dev:mobile": "npm run dev -w @rhophi/mobile",
+    "android:sync": "npm run android:sync -w @rhophi/mobile"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}

@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/client-sdk" },
+    { "path": "packages/commissioning-plugin" },
     { "path": "apps/mobile" }
   ]
 }

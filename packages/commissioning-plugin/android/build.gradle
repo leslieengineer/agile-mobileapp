@@ -1,0 +1,41 @@
+ext {
+    junitVersion = project.hasProperty('junitVersion') ? rootProject.ext.junitVersion : '4.13.2'
+}
+
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.7.2'; classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10' }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace 'uk.rhophi.commissioning'
+    compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 35
+    defaultConfig { minSdk 24; targetSdk 35 }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+def chipDir = System.getenv('RHOPHI_CHIP_ANDROID_DIR')
+def mockOnly = System.getenv('RHOPHI_MOCK_ONLY') == 'true'
+if (chipDir == null || !file("${chipDir}/SHA256SUMS").exists()) {
+    if (!mockOnly) {
+        throw new GradleException('RHOPHI_CHIP_ANDROID_DIR must point to checksum-pinned ConnectedHomeIP controller artifacts')
+    }
+    android.sourceSets.main.java.srcDirs = ['src/mock/java']
+} else {
+    android.sourceSets.main.jniLibs.srcDirs = ["${chipDir}/jni"]
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation 'androidx.annotation:annotation:1.8.2'
+    if (!mockOnly) {
+        implementation fileTree(dir: "${chipDir}/jars", include: ['*.jar'])
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+        implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    }
+    testImplementation "junit:junit:${junitVersion}"
+}

@@ -51,4 +51,10 @@ async function login() {
   </ion-page>
 </template>
 
-<style scoped>.login-page { padding-top: 18vh; max-width: 460px; } h1 { font-size: 3rem; margin: 4px 0; }</style>
+<style scoped>
+.login-page { max-width: 460px; padding-top: clamp(48px, 10vh, 96px); }
+h1 { margin: 4px 0 8px; font-size: 2.35rem; line-height: 1.05; }
+ion-card { margin-top: 24px; }
+ion-input + ion-input { margin-top: 10px; }
+ion-button { margin-top: 20px; }
+</style>

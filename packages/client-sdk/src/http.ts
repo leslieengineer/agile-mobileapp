@@ -34,11 +34,15 @@ export class ApiError extends Error {
 }
 
 export class RhophiApiClient {
+  private readonly fetcher: typeof fetch
+
   constructor(
     private readonly baseUrl: string,
     private readonly tokens: TokenProvider,
-    private readonly fetcher: typeof fetch = fetch,
-  ) {}
+    fetcher?: typeof fetch,
+  ) {
+    this.fetcher = fetcher ?? fetch.bind(globalThis)
+  }
 
   async login(username: string, password: string) {
     const response = MobileLoginResponseSchema.parse(await this.request('/api/mobile/login', {
@@ -69,7 +73,7 @@ export class RhophiApiClient {
     return this.request('/api/health', {}, false)
   }
 
-  private async request<T>(path: string, init: RequestInit = {}, authenticate = true): Promise<T> {
+  async request<T>(path: string, init: RequestInit = {}, authenticate = true): Promise<T> {
     const token = authenticate ? await this.tokens.get() : undefined
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
       ...init,

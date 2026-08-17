@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CommissioningNotificationSchema } from './commissioning/contracts.js'
 
 export const CLUSTERS = {
   OnOff: 0x0006,
@@ -92,6 +93,20 @@ export const ApiErrorCodeSchema = z.enum([
   'PAYLOAD_TOO_LARGE',
   'UPSTREAM_TIMEOUT',
   'MQTT_UNAVAILABLE',
+  'INVALID_DEVICE',
+  'CLAIM_NOT_FOUND',
+  'CLAIM_INVALID',
+  'CLAIM_REPLAYED',
+  'CLAIM_EXPIRED',
+  'CLAIM_RATE_LIMITED',
+  'TRANSACTION_CONFLICT',
+  'TRANSACTION_NOT_FOUND',
+  'TRANSACTION_STATE_INVALID',
+  'THREAD_ATTACH_FAILED',
+  'BBB_COMMISSION_FAILED',
+  'NODE_NOT_FOUND',
+  'SUBSCRIPTION_FAILED',
+  'CLEANUP_REQUIRED',
   'INTERNAL',
 ])
 
@@ -106,6 +121,7 @@ export const SseEnvelopeSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('event'), data: MatterEventSchema }).strict(),
   z.object({ type: z.literal('status'), data: z.record(z.unknown()) }).strict(),
   z.object({ type: z.literal('snapshot'), data: z.object({ devices: z.record(z.unknown()) }) }).strict(),
+  CommissioningNotificationSchema,
 ])
 
 export type CommandInput = z.infer<typeof CommandInputSchema>

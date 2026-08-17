@@ -5,6 +5,7 @@ export const COMMISSIONING_SUCCESS_STATES = [
   'IDENTIFYING',
   'CLAIM_CHALLENGE',
   'CLAIM_VERIFIED',
+  'GRANT_ISSUED',
   'BLE_CONNECTING',
   'PASE_ESTABLISHED',
   'ATTESTATION_VERIFIED',
@@ -34,13 +35,17 @@ export const COMMISSIONING_FAILURE_STATES = [
   'EXPIRED',
 ] as const
 
-export type CommissioningSuccessState = typeof COMMISSIONING_SUCCESS_STATES[number]
-export type CommissioningFailureState = typeof COMMISSIONING_FAILURE_STATES[number]
-export type CommissioningState = CommissioningSuccessState | CommissioningFailureState
+export const COMMISSIONING_RECOVERY_STATES = ['CLEANUP_PENDING'] as const
 
-const nextSuccess = new Map<CommissioningSuccessState, CommissioningSuccessState>(
+export type CommissioningSuccessState = typeof COMMISSIONING_SUCCESS_STATES[number]
+export type CommissioningRecoveryState = typeof COMMISSIONING_RECOVERY_STATES[number]
+export type CommissioningFailureState = typeof COMMISSIONING_FAILURE_STATES[number]
+export type CommissioningState = CommissioningSuccessState | CommissioningRecoveryState | CommissioningFailureState
+
+const nextSuccess = new Map<CommissioningState, CommissioningState>(
   COMMISSIONING_SUCCESS_STATES.slice(0, -1).map((state, index) => [state, COMMISSIONING_SUCCESS_STATES[index + 1]!]),
 )
+nextSuccess.set('TEMP_FABRIC_REMOVING', 'COMPLETE')
 
 const retryTargets: Partial<Record<CommissioningFailureState, CommissioningSuccessState>> = {
   CLAIM_FAILED: 'CLAIM_CHALLENGE',
@@ -49,19 +54,23 @@ const retryTargets: Partial<Record<CommissioningFailureState, CommissioningSucce
   THREAD_ATTACH_FAILED: 'THREAD_PROVISIONING',
   NODE_NOT_DISCOVERED: 'WINDOW_OPEN',
   BBB_COMMISSION_FAILED: 'WINDOW_OPEN',
-  SUBSCRIPTION_FAILED: 'ENDPOINT_DISCOVERY',
+  SUBSCRIPTION_FAILED: 'WINDOW_OPEN',
   TEMP_FABRIC_REMOVE_FAILED: 'TEMP_FABRIC_REMOVING',
 }
 
 export function transition(current: CommissioningState, next: CommissioningState): CommissioningState {
+  if (next === 'CANCELLED' && current !== 'COMPLETE') return next
   if (isFailure(next)) {
     if (isTerminal(current)) throw new Error(`Cannot fail terminal state ${current}`)
     return next
   }
   if (isFailure(current)) {
     if (retryTargets[current] === next) return next
+    if (current === 'TEMP_FABRIC_REMOVE_FAILED' && next === 'CLEANUP_PENDING') return next
     throw new Error(`Invalid retry transition ${current} -> ${next}`)
   }
+  if (current === 'TEMP_FABRIC_REMOVING' && next === 'CLEANUP_PENDING') return next
+  if (current === 'CLEANUP_PENDING' && next === 'TEMP_FABRIC_REMOVING') return next
   if (nextSuccess.get(current) !== next) throw new Error(`Invalid transition ${current} -> ${next}`)
   return next
 }

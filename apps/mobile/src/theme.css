@@ -1,18 +1,36 @@
 :root {
-  --ion-color-primary: #27d3c2;
-  --ion-color-primary-rgb: 39, 211, 194;
+  --ion-color-primary: #2dd4bf;
+  --ion-color-primary-rgb: 45, 212, 191;
+  --ion-color-primary-contrast: #031713;
+  --ion-color-primary-contrast-rgb: 3, 23, 19;
+  --ion-color-primary-shade: #28bba8;
+  --ion-color-primary-tint: #42d8c5;
   --ion-background-color: #07131f;
   --ion-background-color-rgb: 7, 19, 31;
   --ion-text-color: #edf8f7;
+  --ion-text-color-rgb: 237, 248, 247;
   --ion-card-background: #102433;
+  --ion-toolbar-background: #091926;
+  --ion-toolbar-color: #edf8f7;
+  --ion-tab-bar-background: #091926;
+  --ion-tab-bar-color: #91a7b3;
+  --ion-tab-bar-color-selected: #2dd4bf;
 }
 
 body { background: radial-gradient(circle at top, #12384a, #07131f 48%); }
 ion-content::part(background) { background: transparent; }
-.page { max-width: 880px; margin: 0 auto; padding: 16px; }
-.eyebrow { color: #57e3d5; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
-.muted { color: #93a9b5; }
+ion-card { margin: 12px 0; border: 1px solid rgba(147, 169, 181, 0.12); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16); }
+ion-list[inset] { margin: 12px 0 24px; border-radius: 14px; }
+ion-tab-bar { border-top: 1px solid rgba(147, 169, 181, 0.16); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); }
+ion-tab-button { font-size: 0.78rem; }
+ion-tab-button ion-icon { font-size: 1.45rem; }
+h1 { margin: 8px 0 20px; font-size: clamp(1.85rem, 7vw, 2.35rem); line-height: 1.12; letter-spacing: -0.025em; }
+h2 { line-height: 1.25; }
+.page { max-width: 880px; margin: 0 auto; padding: 20px 16px calc(28px + env(safe-area-inset-bottom)); }
+.app-loading { display: grid; min-height: 100%; place-items: center; background: #07131f; }
+.eyebrow { margin: 4px 0 8px; color: #57e3d5; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+.muted { color: #a9bac3; }
 .error { color: #ff9aa9; }
 .mock-banner { background: #684d06; color: #fff2bd; padding: 10px 16px; text-align: center; font-weight: 700; }
-.card-grid { display: grid; gap: 14px; }
+.card-grid { display: grid; gap: 14px; margin-bottom: 18px; }
 @media (min-width: 720px) { .card-grid { grid-template-columns: 1fr 1fr; } }

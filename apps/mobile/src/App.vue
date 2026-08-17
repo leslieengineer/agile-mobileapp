@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { IonApp, IonRouterOutlet } from '@ionic/vue'
+import { IonApp, IonRouterOutlet, IonSpinner } from '@ionic/vue'
 import { useSessionStore } from '@rhophi/client-sdk'
 import { api } from './services/api'
 import { startRealtime, stopRealtime } from './services/realtime'
@@ -30,5 +30,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <ion-app><ion-router-outlet /></ion-app>
+  <ion-app>
+    <div v-if="session.loading" class="app-loading"><ion-spinner name="crescent" /></div>
+    <ion-router-outlet v-else />
+  </ion-app>
 </template>

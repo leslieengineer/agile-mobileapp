@@ -1,5 +1,6 @@
 import { AuthenticatedSseClient, useActivityStore, useConnectionStore, useDeviceStore } from '@rhophi/client-sdk'
 import { tokenStore } from './tokenStore'
+import { useCommissioningStore } from '../stores/commissioning'
 
 let client: AuthenticatedSseClient | undefined
 
@@ -17,6 +18,13 @@ export function startRealtime() {
       if (envelope.type === 'response' || envelope.type === 'event') {
         devices.apply(envelope.data)
         activity.push(envelope.data)
+      } else if (envelope.type === 'provisioning') {
+        const commissioning = useCommissioningStore()
+        if (commissioning.transaction?.transactionId === envelope.transaction_id) {
+          commissioning.state = envelope.state
+          commissioning.error = envelope.error?.message ?? ''
+          commissioning.persist()
+        }
       }
     },
   })

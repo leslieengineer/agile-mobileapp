@@ -12,6 +12,8 @@ Repository `agile-mobileapp` hiện đã có Phase A source code và Add Device 
 - contracts mobile nội bộ tại `packages/client-sdk/src/contracts.ts`; không còn Git submodule hoặc workspace dependency tới dashboard
 - dashboard controls: OnOff, Level, Window Covering, vendor Cooktop, connection badge và activity log
 - Android secure session plugin dùng AES-256-GCM với non-exportable key trong Android Keystore; SharedPreferences chỉ giữ ciphertext và IV
+- default browser `fetch` được bind với `globalThis`, tránh lỗi WebView `Illegal invocation`; có regression test
+- Ionic tabs dùng page shell đúng chuẩn, session hydration gate và dark palette; Login/Home không còn chồng view và ba tab hoạt động trên Android thật
 - Add Device wizard có đầy đủ presentation states nhưng chỉ dùng development mock, không scan BLE và không chạy Matter
 
 Source trong repository `agile-dashboard` riêng biệt, commit `0b4bb7c`, đã bổ sung:
@@ -22,26 +24,28 @@ Source trong repository `agile-dashboard` riêng biệt, commit `0b4bb7c`, đã 
 - web/mobile sessions tồn tại đồng thời
 - raw bearer token không được persist; session store chỉ lưu SHA-256 digest
 
-Các thay đổi dashboard trên đã được commit trong repository dashboard riêng, nhưng chưa có bằng chứng release/deploy lên BBB. Vì vậy production tại `dashboard.rhophi.uk` chưa được coi là hỗ trợ mobile bearer auth cho đến khi commit đó được release và smoke-test.
+Dashboard commit `0b4bb7c` đã được bundle và deploy lên BBB. Production `dashboard.rhophi.uk` hiện trả CORS hợp lệ cho Capacitor origin `https://localhost`, có route mobile bearer auth và vẫn giữ web cookie/CSRF flow.
 
 Validation đã chạy:
 
-- mobile tests: 13/13 pass
+- mobile tests: 14/14 pass, gồm regression test cho browser fetch receiver
 - dashboard tests: 17/17 pass, gồm integration test web cookie và mobile bearer session đồng thời
 - mobile và dashboard typecheck pass
 - mobile và dashboard production web build pass
 - `cap sync android` pass
-- Android SDK Platform 35/Build Tools 35.0.0 installed và `assembleDebug` pass
+- Android SDK Platform 35/Build Tools 35.0.0 installed và `assembleDebug` pass với JDK 21
 - debug APK signature v1/v2 verified
 - production build từ chối `VITE_COMMISSIONING_MODE=mock`
+- CORS preflight `OPTIONS /api/mobile/login` từ `https://localhost` trả `204` với allow-origin/headers/methods đúng
+- debug APK cài và chạy trên Sharp A101SH, Android 13/API 33; login, session restore, authenticated SSE `Live`, Home/Add Device/Settings navigation và dark UI đã smoke-test
 
 Giới hạn validation hiện tại:
 
-- debug APK đã build và verify; chưa cài/chạy smoke test trên Android phone
-- Kotlin secure session plugin chưa được instrumentation-test trên Android device
+- Kotlin secure session plugin chưa có Android instrumentation test; mới có smoke test session restore qua app restart/update
+- chưa xác nhận command round-trip tới application node thật; Gateway/controller vẫn mock và catalog Mobile vẫn static
 - chưa flash hoặc HIL với ESP32-C6 application node
 - chưa có BLE ICD, native Matter controller artifact, claim registry/API hoặc BBB commissioning RPC
-- Gateway/controller deployed vẫn ở trạng thái mô tả tại mục 3
+- Add Device production vẫn báo `Commissioning unavailable`
 
 ## 1. Mục tiêu
 
@@ -60,7 +64,7 @@ Hệ thống phải độc lập, không phụ thuộc Home Assistant, Google Ho
 
 - Ionic Vue + Capacitor UI: đã implement source và production web build
 - REST/SSE client, Pinia logic và Ionic UI patterns tham khảo WebUI: đã implement
-- Kotlin secure session plugin: đã implement source, chưa Gradle-build/HIL do thiếu Android SDK
+- Kotlin secure session plugin: đã implement, Gradle-build và smoke-test session restore trên Android 13; chưa có instrumentation test/HIL
 - Kotlin BLE/Matter commissioning plugin: chưa implement; production UI báo `Commissioning unavailable`
 - Add Device development mock: đã implement, chỉ bật khi `import.meta.env.DEV` và `VITE_COMMISSIONING_MODE=mock`
 - iOS/Swift triển khai sau khi Android HIL đạt
@@ -107,7 +111,8 @@ matter-controller 0.17.9
 - chưa có commissioned application node
 - chưa có mobile commissioning API
 - chưa có `removeNode`, `read`, subscription/event RPC
-- chưa xác nhận mobile bearer auth đã deploy
+- mobile bearer auth đã deploy tại `dashboard.rhophi.uk`; CORS `https://localhost`, login/session restore và authenticated SSE đã smoke-test trên Android
+- BFF artifact tại `/opt/matter-web-auth/webui-bff.cjs` đã đối chiếu hash với artifact staged từ commit `0b4bb7c`
 
 ### Trạng thái source trong repository dashboard riêng
 
@@ -118,7 +123,7 @@ matter-controller 0.17.9
 - chưa có commissioning sessions API tại mục 12
 - chưa có controller RPC hoặc Multi-Admin API tại mục 16
 
-Không được suy luận trạng thái production từ source commit. Chỉ cập nhật phần deployed sau khi dashboard release tương ứng được kiểm tra trên BBB.
+Không được suy luận trạng thái production từ source commit. Trạng thái deployed ở trên được cập nhật từ live HTTP/CORS probes, Android smoke test và artifact hash trên BBB.
 
 ## 4. Kiến trúc Mobile
 
@@ -604,7 +609,48 @@ Vue layer owns presentation, not Matter cryptography.
 - token web development chỉ ở memory; không dùng localStorage
 - Kotlin plugin được register trong `MainActivity`
 - Android SDK API 35 đã cài tại `%LOCALAPPDATA%/Android/Sdk`; Gradle `assembleDebug` đã pass với JDK 21
+- APK đã smoke-test trên Sharp A101SH, Android 13/API 33; package `uk.rhophi.mobile`
 - connectedhomeip, Android BLE, CameraX, Coroutines/StateFlow commissioning code và Matter native bridge chưa có
+
+### Build, test và cài Android trên Windows
+
+Yêu cầu: Node.js `>=20.11`, npm, JDK 21, Android SDK Platform 35, Build Tools 35.0.0 và platform-tools trong `PATH`.
+
+Từ root `mobileapp-reference`:
+
+```cmd
+npm install
+npm test
+npm run typecheck
+npm run build -w @rhophi/client-sdk -- --force
+npm run build -w @rhophi/mobile
+npm run android:sync
+cd apps\mobile\android
+gradlew.bat assembleDebug
+```
+
+APK debug được tạo tại:
+
+```text
+apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Cài và mở trên thiết bị đã bật USB debugging:
+
+```cmd
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+adb shell am start -W -n uk.rhophi.mobile/.MainActivity
+```
+
+Hai lệnh `adb` trên chạy từ `apps\mobile\android`. Dùng `adb devices -l` để xác nhận thiết bị ở trạng thái `device`, không phải `unauthorized`.
+
+Chạy web development server từ root:
+
+```cmd
+npm run dev:mobile
+```
+
+`VITE_API_BASE_URL` mặc định là `https://dashboard.rhophi.uk`. Capacitor Android dùng origin `https://localhost`; BFF production phải allow origin này. `VITE_COMMISSIONING_MODE=mock` chỉ dành cho development và bị từ chối trong production build.
 
 ## 19. iOS implementation
 
@@ -781,7 +827,7 @@ Không log:
 
 ### Đã chạy trong repository hiện tại
 
-- client SDK REST bearer header và typed API error tests
+- client SDK REST bearer header, typed API error và browser fetch receiver-binding regression tests
 - SSE chunk boundary, CRLF, multiline data, retry field tests
 - normalized device state merge test
 - commissioning success path, invalid transition và retry target tests
@@ -790,8 +836,10 @@ Không log:
 - Ionic connection component test
 - dashboard mobile auth integration: web cookie và mobile bearer sessions đồng thời, CORS, CSRF giữ nguyên cho web, bearer revoke
 - production mock guard test
-- mobile 13/13 tests pass; dashboard 17/17 tests pass
+- mobile 14/14 tests pass; dashboard 17/17 tests pass
 - TypeScript/Vue typecheck và production web builds pass
+- Android physical-device smoke: login/session restore, SSE `Live`, Home/Add Device/Settings navigation, không còn page overlap
+- live CORS preflight và unauthenticated session behavior tại `dashboard.rhophi.uk` đúng contract
 
 Chưa có QR-less advertisement parser, claim crypto, X25519/HKDF/AES-GCM commissioning vectors hoặc Android BLE/Matter integration tests vì corresponding production code chưa tồn tại.
 
@@ -849,29 +897,29 @@ MVP đạt khi:
 
 Chưa đạt system MVP. Không mục nào liên quan BLE/Matter/HIL được phép đánh dấu pass từ development mock.
 
-Phase A source đã chứng minh được UI shell, bearer REST/SSE client, WebUI-compatible command controls, session isolation và secret-redaction unit tests. Chưa chứng minh điều khiển LED/relay thật từ Mobile vì BFF changes chưa deploy và Gateway vẫn mock/chưa có application node.
+Phase A đã chứng minh được UI shell trên Android thật, bearer login/session restore, authenticated SSE, WebUI-compatible command controls ở mức source, session isolation, CORS production và secret-redaction unit tests. Chưa chứng minh điều khiển LED/relay thật từ Mobile vì Gateway vẫn mock và chưa có commissioned application node.
 
 ## 28. Implementation phases
 
-### Phase A — Mobile shell: source implemented, deployment/native validation incomplete
+### Phase A — Mobile shell: deployed và smoke-tested, native validation còn thiếu
 
 Đã có:
 
 - Ionic Vue + Capacitor Android project
 - shared client SDK và Ionic control UI
-- mobile bearer login/session source trong repository dashboard riêng
-- Dashboard REST/SSE source
-- Android Keystore secure session plugin source
+- mobile bearer login/session/logout/command/SSE trong dashboard BFF
+- dashboard commit `0b4bb7c` đã deploy tại `dashboard.rhophi.uk`
+- CORS allowlist `MOBILE_ALLOWED_ORIGINS=https://localhost` đã xác nhận bằng live preflight
+- Android Keystore secure session plugin đã Gradle-build
+- debug APK đã cài trên Android 13; login, session restore, SSE và tab navigation đã smoke-test
 - development Add Device wizard
 
 Còn thiếu để đóng Phase A production:
 
-- release dashboard commit chứa mobile auth
-- deploy và smoke test BFF mobile auth tại `dashboard.rhophi.uk`
-- cấu hình `MOBILE_ALLOWED_ORIGINS=https://localhost` khi deploy nếu không dùng default
-- cài debug APK và smoke test trên phone thật
 - Android instrumentation test cho Keystore persistence/app restart
-- kiểm tra authenticated SSE và command round-trip từ phone thật
+- command round-trip từ phone tới application node thật
+- dynamic device inventory thay static Phase A catalog
+- release signing, distribution và production device matrix
 
 ### Phase B — BLE claim: chưa bắt đầu production implementation
 

@@ -25,6 +25,21 @@ describe('Rhophi API client', () => {
     expect(fetcher.mock.calls[1][1].headers.Authorization).toBe(`Bearer ${'a'.repeat(43)}`)
   })
 
+  it('binds the default fetcher to the global object', async () => {
+    const fetcher = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation')
+      return Promise.resolve(new Response(JSON.stringify({ authenticated: true, username: 'admin', expires_at: '2026-08-17T00:00:00.000Z', token: 'a'.repeat(43) }), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', fetcher)
+
+    try {
+      await new RhophiApiClient('https://example.test', provider()).login('admin', 'password1')
+      expect(fetcher).toHaveBeenCalledOnce()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('maps typed API errors', async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: 'UNAUTHENTICATED', message: 'Login required' } }), { status: 401 }))
     const client = new RhophiApiClient('', provider(), fetcher)

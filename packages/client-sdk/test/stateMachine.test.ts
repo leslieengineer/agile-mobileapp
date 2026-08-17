@@ -18,4 +18,22 @@ describe('commissioning state machine', () => {
     expect(transition('BLE_TIMEOUT', 'BLE_SCANNING')).toBe('BLE_SCANNING')
     expect(canRetry('ATTESTATION_FAILED')).toBe(false)
   })
+
+  it('contains every server-owned state and preserves cleanup recovery', () => {
+    const states = new Set([
+      ...COMMISSIONING_SUCCESS_STATES,
+      'CLEANUP_PENDING',
+    ])
+    for (const state of [
+      'CREATED', 'CLAIM_CHALLENGE', 'CLAIM_VERIFIED', 'GRANT_ISSUED',
+      'PASE_ESTABLISHED', 'ATTESTATION_VERIFIED', 'THREAD_PROVISIONING',
+      'THREAD_ATTACHING', 'TEMP_FABRIC_COMMISSIONED', 'WINDOW_OPEN',
+      'BBB_FABRIC_COMMISSIONING', 'ENDPOINT_DISCOVERY', 'SUBSCRIBING',
+      'TEMP_FABRIC_REMOVING', 'CLEANUP_PENDING', 'COMPLETE',
+    ]) expect(states.has(state)).toBe(true)
+
+    expect(transition('TEMP_FABRIC_REMOVING', 'CLEANUP_PENDING')).toBe('CLEANUP_PENDING')
+    expect(transition('CLEANUP_PENDING', 'TEMP_FABRIC_REMOVING')).toBe('TEMP_FABRIC_REMOVING')
+    expect(transition('PASE_FAILED', 'CANCELLED')).toBe('CANCELLED')
+  })
 })

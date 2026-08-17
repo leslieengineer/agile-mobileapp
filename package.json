@@ -11,7 +11,7 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "build": "npm run build -w @rhophi/client-sdk && npm run build -w @rhophi/mobile",
+    "build": "npm run build -w @rhophi/client-sdk && npm run build -w @rhophi/commissioning-plugin && npm run build -w @rhophi/mobile",
     "typecheck": "npm run build -w @rhophi/client-sdk && npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "dev:mobile": "npm run dev -w @rhophi/mobile",

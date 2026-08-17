@@ -18,6 +18,7 @@
     "@ionic/vue": "^8.4.0",
     "@ionic/vue-router": "^8.4.0",
     "@rhophi/client-sdk": "*",
+    "@rhophi/commissioning-plugin": "*",
     "ionicons": "^7.4.0",
     "pinia": "^2.3.0",
     "vue": "^3.5.13",

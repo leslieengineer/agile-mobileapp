@@ -18,8 +18,8 @@ android {
     kotlinOptions { jvmTarget = '17' }
 }
 
-def chipDir = System.getenv('RHOPHI_CHIP_ANDROID_DIR')
-def mockOnly = System.getenv('RHOPHI_MOCK_ONLY') == 'true'
+def chipDir = System.getenv('RHOPHI_CHIP_ANDROID_DIR') ?: project.findProperty('RHOPHI_CHIP_ANDROID_DIR')
+def mockOnly = (System.getenv('RHOPHI_MOCK_ONLY') ?: project.findProperty('RHOPHI_MOCK_ONLY')) == 'true'
 if (chipDir == null || !file("${chipDir}/SHA256SUMS").exists()) {
     if (!mockOnly) {
         throw new GradleException('RHOPHI_CHIP_ANDROID_DIR must point to checksum-pinned ConnectedHomeIP controller artifacts')

@@ -23,7 +23,7 @@ const phase = computed(() => {
 })
 </script>
 
-<template><ion-page><ion-header><ion-toolbar><ion-title>Add Device</ion-title></ion-toolbar></ion-header><ion-content>
+<template><ion-page><ion-header><ion-toolbar><ion-title>Add Device (Bypass)</ion-title></ion-toolbar></ion-header><ion-content>
   <div v-if="commissioning.mock" class="mock-banner">Development simulation · No BLE or Matter operation is performed</div>
   <div class="page">
     <ion-card v-if="!commissioning.available"><ion-card-content><h2>Commissioning unavailable</h2><p class="muted">Provisioning requires the signed native Android build.</p></ion-card-content></ion-card>

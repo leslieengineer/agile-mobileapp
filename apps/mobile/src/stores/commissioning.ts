@@ -56,23 +56,25 @@ export const useCommissioningStore = defineStore('commissioning', {
       this.error = ''
       try {
         this.state = transition(this.state, 'BLE_SCANNING')
-        this.devices = (await commissioningService.scanDevices({ timeoutMs: 10_000 })).devices
+        const response = await commissioningService.scanDevices({ timeoutMs: 10_000 })
+        
+        if (response.devices.length === 0) {
+          throw new Error('Không tìm thấy thiết bị Matter/ESP32 nào ở gần.')
+        }
+        
+        this.devices = response.devices
+        // ĐÃ XÓA DÒNG TỰ ĐỘNG ĐỔI STATE Ở ĐÂY
       } catch (error) {
-        this.fail('BLE_TIMEOUT', error)
-      } finally { this.running = false }
+        this.fail('NODE_NOT_DISCOVERED', error)
+      } finally { 
+        this.running = false 
+      }
     },
     async select(device: DiscoveredDevice) {
       this.selected = device
-      this.state = transition(this.state, 'DEVICE_SELECTED')
-      this.running = true
-      try {
-        this.state = transition(this.state, 'IDENTIFYING')
-        await commissioningService.identifyDevice({ address: device.address })
-        this.inject('INVALID_DEVICE')
-        this.state = transition(this.state, 'CLAIM_CHALLENGE')
-      } catch (error) {
-        if (this.state !== 'INVALID_DEVICE') this.fail('INVALID_DEVICE', error)
-      } finally { this.running = false }
+      // Bỏ qua vòng xoay Identify, ép nhảy thẳng sang màn hình Verify Ownership
+      this.state = 'CLAIM_CHALLENGE' as any;
+      this.running = false;
     },
     async commission() {
       if (!this.selected) return

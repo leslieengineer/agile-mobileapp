@@ -42,7 +42,11 @@ export const useCommissioningStore = defineStore('commissioning', {
     available: state => state.mock || state.native,
   },
   actions: {
-    reset() {
+    async reset() {
+      await commissioningService.cancel({ transactionId: this.transaction?.keyId }).catch(() => undefined)
+      if (this.transaction && !this.mock) {
+        await commissioningApi.cancel(this.transaction.transactionId).catch(() => undefined)
+      }
       this.state = 'CREATED'
       this.devices = []
       this.selected = undefined
@@ -52,6 +56,7 @@ export const useCommissioningStore = defineStore('commissioning', {
       commissioningTransactionStore.clear()
     },
     async scan() {
+      if (this.running) return
       this.running = true
       this.error = ''
       try {
@@ -71,20 +76,36 @@ export const useCommissioningStore = defineStore('commissioning', {
       }
     },
     async select(device: DiscoveredDevice) {
-      this.selected = device
-      // Bỏ qua vòng xoay Identify, ép nhảy thẳng sang màn hình Verify Ownership
-      this.state = 'CLAIM_CHALLENGE' as any;
-      this.running = false;
-    },
-    async commission() {
-      if (!this.selected) return
+      if (this.running) return
       this.running = true
       this.error = ''
-      
-      // BẬT HACK: Ép toàn bộ luồng Commissioning chạy qua nhánh ảo (Mock)
-      // Bỏ qua mọi API gọi lên Backend BBB
-      this.mock = true
-      
+      try {
+        this.state = transition(this.state, 'DEVICE_SELECTED')
+        this.state = transition(this.state, 'IDENTIFYING')
+        const identity = await commissioningService.readIdentity({ address: device.address })
+        if (identity.protocolVersion !== 1 || (identity.flags & 0x01) === 0) {
+          throw new Error('Device is not in a claimable commissioning window')
+        }
+        this.selected = {
+          ...device,
+          claimId: identity.claimId,
+          productId: identity.productId,
+          productName: identity.productId === 1 ? 'Rhophi Plug' : `Rhophi product ${identity.productId}`,
+          serialSuffix: identity.claimId.slice(-4),
+        }
+        await commissioningService.identifyDevice({ address: device.address }).catch(() => undefined)
+        this.state = transition(this.state, 'CLAIM_CHALLENGE')
+      } catch (error) {
+        this.fail('INVALID_DEVICE', error)
+      } finally {
+        this.running = false
+      }
+    },
+    async commission() {
+      if (!this.selected || this.running) return
+      this.running = true
+      this.error = ''
+
       try {
         const key = await commissioningService.createEphemeralKey({ transactionHint: crypto.randomUUID() })
         const created = this.mock
@@ -210,6 +231,14 @@ export const useCommissioningStore = defineStore('commissioning', {
       if (!this.mock) {
         const session = await commissioningApi.getSession(snapshot.transactionId)
         this.state = session.state as CommissioningState
+        if (['CLAIM_CHALLENGE', 'CLAIM_VERIFIED', 'GRANT_ISSUED'].includes(this.state)) {
+          await commissioningApi.cancel(snapshot.transactionId).catch(() => undefined)
+          await commissioningService.cancel({ transactionId: snapshot.keyId }).catch(() => undefined)
+          this.state = 'CREATED'
+          this.selected = undefined
+          this.transaction = undefined
+          commissioningTransactionStore.clear()
+        }
       } else {
         this.state = snapshot.state
       }
@@ -238,7 +267,7 @@ export const useCommissioningStore = defineStore('commissioning', {
       }
       if (!retryTarget(this.state)) return
       await this.cancel()
-      this.reset()
+      await this.reset()
       await this.scan()
     },
     async retryGatewayHandoff() {
@@ -273,6 +302,7 @@ export const useCommissioningStore = defineStore('commissioning', {
       }
     },
     async advance(next: CommissioningState) {
+      if (this.state === next) return
       if (this.mock) await new Promise(resolve => setTimeout(resolve, import.meta.env.MODE === 'test' ? 0 : 140))
       this.state = transition(this.state, next)
       this.persist()

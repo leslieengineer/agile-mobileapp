@@ -1,3 +1,5 @@
+import type { CommissioningApi } from './commissioning/api.js'
+
 export interface DeviceEndpointDescriptor {
   endpoint: number
   kind: 'onoff' | 'level' | 'window-covering' | 'cooktop'
@@ -20,6 +22,25 @@ export class StaticDeviceCatalog implements DeviceCatalog {
 
   async list() {
     return structuredClone(this.devices)
+  }
+}
+
+export class ApiDeviceCatalog implements DeviceCatalog {
+  constructor(private readonly api: CommissioningApi) {}
+
+  async list(): Promise<DeviceDescriptor[]> {
+    const response = await this.api.listDevices()
+    return response.devices.map(device => {
+      const descriptor = device.descriptor as { endpoints?: Array<{ endpoint?: number; server_clusters?: number[] }> }
+      const endpoints: DeviceEndpointDescriptor[] = []
+      for (const endpoint of descriptor.endpoints ?? []) {
+        if (endpoint.endpoint === undefined) continue
+        if (endpoint.server_clusters?.includes(0x0006)) endpoints.push({ endpoint: endpoint.endpoint, kind: 'onoff', label: 'Switch' })
+        if (endpoint.server_clusters?.includes(0x0008)) endpoints.push({ endpoint: endpoint.endpoint, kind: 'level', label: 'Level' })
+        if (endpoint.server_clusters?.includes(0x0102)) endpoints.push({ endpoint: endpoint.endpoint, kind: 'window-covering', label: 'Window' })
+      }
+      return { nodeId: device.node_id, name: 'Rhophi device', product: 'Matter device', endpoints }
+    })
   }
 }
 

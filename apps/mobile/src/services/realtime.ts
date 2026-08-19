@@ -20,7 +20,7 @@ export function startRealtime() {
         activity.push(envelope.data)
       } else if (envelope.type === 'provisioning') {
         const commissioning = useCommissioningStore()
-        if (commissioning.transaction?.transactionId === envelope.transaction_id) {
+        if (commissioning.transaction?.transactionId === envelope.transaction_id && !commissioning.running) {
           commissioning.state = envelope.state
           commissioning.error = envelope.error?.message ?? ''
           commissioning.persist()

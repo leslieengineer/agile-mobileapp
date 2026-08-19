@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CHIP_ROOT="${CHIP_ROOT:-/opt/esp/esp-matter/connectedhomeip/connectedhomeip}"
-EXPECTED_SHA="93abd8e6891bb578ea63254fb29d099936f345c8"
-STAGE_DIR="${1:-${HOME}/.cache/rhophi-chip-controller/93abd8e6/arm64-v8a}"
+CHIP_ROOT="${CHIP_ROOT:-${HOME}/esp-matter/connectedhomeip/connectedhomeip}"
+EXPECTED_SHA="efefc94fee39d8d1fbbc3c27b9d7fc9025095887"
+STAGE_DIR="${1:-${HOME}/.cache/rhophi-chip-controller/efefc94f/arm64-v8a}"
 
 : "${ANDROID_HOME:?ANDROID_HOME must point to Android SDK 34}"
 : "${ANDROID_NDK_HOME:?ANDROID_NDK_HOME must point to NDK 28.2.13676358}"

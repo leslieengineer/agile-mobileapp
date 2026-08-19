@@ -29,60 +29,38 @@ internal class RhophiBleClient(
     private val adapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
     private val sessions = ConcurrentHashMap<String, Session>()
 
-    suspend fun scan(timeoutMs: Long): List<Pair<RhophiWire.Identity, ScanResult>> {
+    suspend fun scan(timeoutMs: Long): List<ScanResult> {
         val scanner = adapter.bluetoothLeScanner ?: error("Bluetooth scanner unavailable")
         val results = ConcurrentHashMap<String, ScanResult>()
+        val matterUuid = ParcelUuid(UUID.fromString("0000fff6-0000-1000-8000-00805f9b34fb"))
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                results[result.device.address] = result
+                val record = result.scanRecord ?: return
+                val advertisesMatter = record.serviceUuids?.contains(matterUuid) == true ||
+                    record.serviceData?.containsKey(matterUuid) == true
+                if (advertisesMatter) results[result.device.address] = result
             }
         }
-        
-        // Quét tất cả thiết bị xung quanh
+
         scanner.startScan(emptyList(), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), callback)
-        
         try {
             delay(timeoutMs.coerceIn(1000L, 30000L))
         } finally {
             scanner.stopScan(callback)
         }
-        
-        val discovered = mutableListOf<Pair<RhophiWire.Identity, ScanResult>>()
-        
-        for (result in results.values) {
-            val scanRecord = result.scanRecord
-            val matterUuid = ParcelUuid(MATTER_SERVICE)
-            
-            // ĐÃ SỬA: Lục soát mã 0xFFF6 ở cả 2 trường Service UUIDs và Service Data
-            val hasMatterService = scanRecord?.serviceUuids?.contains(matterUuid) == true || 
-                                   scanRecord?.serviceData?.containsKey(matterUuid) == true
-            
-            if (hasMatterService) {
-                try {
-                    // NẠP CLAIM ID THỰC TẾ (16 bytes)
-                    val realClaimId = byteArrayOf(
-                        0x63, 0xBC.toByte(), 0xD5.toByte(), 0x60, 
-                        0x96.toByte(), 0x9F.toByte(), 0x5C, 0x68, 
-                        0x61, 0x3B, 0x88.toByte(), 0xEF.toByte(), 
-                        0xC0.toByte(), 0x05, 0xDA.toByte(), 0x98.toByte()
-                    )
-                    
-                    val mockIdentity = RhophiWire.Identity(
-                        flags = 1,
-                        protocolVersion = 1,
-                        productId = 1,
-                        nonce = ByteArray(8),
-                        claimId = realClaimId
-                    )
-                    
-                    discovered += mockIdentity to result
-                } catch (e: Exception) {
-                    // Bỏ qua lỗi parsing
-                }
-            }
+        return results.values.sortedByDescending(ScanResult::getRssi)
+    }
+
+    suspend fun readIdentity(address: String): RhophiWire.Identity {
+        return try {
+            RhophiWire.decodeIdentity(connect(address).read(RhophiWire.identity))
+        } catch (first: IllegalStateException) {
+            val stale = sessions[address]
+            stale?.refreshGattCache()
+            close(address)
+            delay(500L)
+            RhophiWire.decodeIdentity(connect(address).read(RhophiWire.identity))
         }
-        
-        return discovered
     }
 
     suspend fun connect(address: String): Session {
@@ -155,6 +133,9 @@ internal class RhophiBleClient(
         }
 
         fun gatt(): BluetoothGatt = gatt
+        fun refreshGattCache() {
+            runCatching { gatt.javaClass.getMethod("refresh").invoke(gatt) }
+        }
         fun close() { runCatching { gatt.disconnect() }; gatt.close() }
 
         private fun characteristic(uuid: UUID): BluetoothGattCharacteristic =
@@ -179,21 +160,18 @@ internal class RhophiBleClient(
             else if (newState == BluetoothProfile.STATE_DISCONNECTED) disconnected()
         }
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            // Log ra để debug: In toàn bộ các service đang thấy ra logcat
-            gatt.services.forEach { 
-                android.util.Log.d("RHOPHI_GATT", "Found Service: ${it.uuid}") 
+            for (service in gatt.services) {
+                android.util.Log.i("RhophiGatt", "service=${service.uuid}")
+                for (characteristic in service.characteristics) {
+                    android.util.Log.i("RhophiGatt", "characteristic=${characteristic.uuid} properties=${characteristic.properties}")
+                }
             }
-
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 ready.completeExceptionally(IllegalStateException("GATT discovery failed"))
                 return
             }
-
-            // Ép tìm chính xác cái UUID đó
-            val rhophiService = gatt.getService(UUID.fromString("4948504f-4852-31a1-414f-218e10527d9a"))
-            
-            if (rhophiService == null) {
-                ready.completeExceptionally(IllegalStateException("Rhophi GATT service unavailable (UUID mismatch)"))
+            if (gatt.getService(RhophiWire.service) == null) {
+                ready.completeExceptionally(IllegalStateException("Rhophi GATT service unavailable"))
             } else {
                 gatt.requestMtu(247)
             }
@@ -220,10 +198,5 @@ internal class RhophiBleClient(
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) = chip.onCharacteristicChanged(gatt, characteristic)
         override fun onDescriptorRead(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) = chip.onDescriptorRead(gatt, descriptor, status)
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) = chip.onDescriptorWrite(gatt, descriptor, status)
-    }
-
-    companion object {
-        // Biến này hiện không còn dùng trong hàm scan() nữa nhưng vẫn giữ lại để tránh lỗi import
-        private val MATTER_SERVICE: UUID = UUID.fromString("0000fff6-0000-1000-8000-00805f9b34fb")
     }
 }

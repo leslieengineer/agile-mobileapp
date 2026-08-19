@@ -1,5 +1,7 @@
 # Rhophi Mobile App — Implementation Context
 
+> **LEGACY / NON-AUTHORITATIVE.** Context này có thể sai so với native plugin hiện tại. Dùng `../agile-smart-device/docs/04-mobile-commissioning.md`.
+
 ## 0. Trạng thái as-built của repository
 
 Cập nhật ngày 2026-08-17.

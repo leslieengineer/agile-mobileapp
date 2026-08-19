@@ -24,6 +24,7 @@ export interface CommissioningWindow {
 export interface CommissioningService {
   createEphemeralKey(options: { transactionHint: string }): Promise<{ publicKey: string; keyId: string }>
   scanDevices(options?: { timeoutMs?: number }): Promise<{ devices: DiscoveredDevice[] }>
+  readIdentity(options: { address: string }): Promise<{ claimId: string; productId: number; protocolVersion: number; flags: number }>
   identifyDevice(options: { address: string }): Promise<void>
   claimDevice(options: { address: string; challenge: string }): Promise<ClaimResult>
   commissionBle(options: { address: string; keyId: string; grant: EncryptedCommissioningGrant }): Promise<TemporaryNode>

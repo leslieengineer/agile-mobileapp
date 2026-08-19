@@ -17,7 +17,8 @@ export class NativeCommissioningService implements CommissioningService {
     }))
     return { devices }
   }
-  identifyDevice(options: { address: string }) { return Promise.resolve() }
+  readIdentity(options: { address: string }) { return RhophiCommissioning.readIdentity(options) }
+  identifyDevice(options: { address: string }) { return RhophiCommissioning.identifyDevice(options) }
   claimDevice(options: { address: string; challenge: string }) { return RhophiCommissioning.claimDevice(options) }
   commissionBle(options: Parameters<CommissioningService['commissionBle']>[0]) {
     const grant = options.grant

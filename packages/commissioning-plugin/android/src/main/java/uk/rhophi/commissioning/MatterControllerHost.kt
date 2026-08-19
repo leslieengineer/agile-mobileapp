@@ -2,6 +2,9 @@ package uk.rhophi.commissioning
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import chip.devicecontroller.AttestationInfo
 import chip.devicecontroller.ChipDeviceController
 import chip.devicecontroller.ControllerParams
@@ -26,6 +29,7 @@ internal class MatterControllerHost(context: Context) {
     val controller: ChipDeviceController
     private val allowDevelopmentAttestation =
         context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
         ChipDeviceController.loadJni()
@@ -62,8 +66,9 @@ internal class MatterControllerHost(context: Context) {
             30,
             DeviceAttestationDelegate { devicePtr: Long, _: AttestationInfo, errorCode: Long ->
                 val accepted = errorCode == 0L || allowDevelopmentAttestation
+                Log.i("RhophiCommissioning", "Device attestation errorCode=$errorCode accepted=$accepted")
                 onResult(accepted)
-                controller.continueCommissioning(devicePtr, accepted)
+                mainHandler.post { controller.continueCommissioning(devicePtr, accepted) }
             },
         )
     }

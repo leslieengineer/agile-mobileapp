@@ -11,6 +11,15 @@ export class MockCommissioningService implements CommissioningService {
       { address: '00:00:00:00:00:02', claimId: 'bW9jay1kZXZpY2UtYjIxNw', productId: 1, productName: 'Rhophi Plug', serialSuffix: 'B217', rssi: -67 },
     ] }
   }
+  async readIdentity(options: { address: string }) {
+    await wait()
+    return {
+      claimId: options.address.endsWith('01') ? 'bW9jay1kZXZpY2UtYTAxNA' : 'bW9jay1kZXZpY2UtYjIxNw',
+      productId: 1,
+      protocolVersion: 1,
+      flags: 1,
+    }
+  }
   async identifyDevice() { await wait() }
   async claimDevice(options: { address: string; challenge: string }) {
     await wait()

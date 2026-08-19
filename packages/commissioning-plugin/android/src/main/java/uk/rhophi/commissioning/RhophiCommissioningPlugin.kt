@@ -75,13 +75,20 @@ class RhophiCommissioningPlugin : Plugin() {
 
     private fun scanDevicesGranted(call: PluginCall) = launch(call) {
         identities.clear()
+        ble.closeAll()
         val timeoutMs = (call.getInt("timeoutMs") ?: 10000).toLong()
         val devices = JSArray()
-        for ((identity, result) in ble.scan(timeoutMs)) {
-            identities[result.device.address] = identity
+        for (result in ble.scan(timeoutMs)) {
+            val address = result.device.address
+            val identity = try {
+                runCatching { ble.readIdentity(address) }.getOrNull()
+            } finally {
+                ble.close(address)
+            } ?: continue
+            identities[address] = identity
             devices.put(
                 JSObject()
-                    .put("address", result.device.address)
+                    .put("address", address)
                     .put("claimId", Base64Url.encode(identity.claimId))
                     .put("productId", identity.productId)
                     .put("protocolVersion", identity.protocolVersion)
@@ -90,6 +97,21 @@ class RhophiCommissioningPlugin : Plugin() {
             )
         }
         call.resolve(JSObject().put("devices", devices))
+    }
+
+    @PluginMethod
+    fun readIdentity(call: PluginCall) = launch(call) {
+        requireBlePermission()
+        val address = requiredString(call, "address")
+        val identity = ble.readIdentity(address)
+        identities[address] = identity
+        call.resolve(
+            JSObject()
+                .put("claimId", Base64Url.encode(identity.claimId))
+                .put("productId", identity.productId)
+                .put("protocolVersion", identity.protocolVersion)
+                .put("flags", identity.flags),
+        )
     }
 
     @PluginMethod
@@ -161,9 +183,25 @@ class RhophiCommissioningPlugin : Plugin() {
                 override fun onCommissioningStageStart(nodeId: Long, stage: String) {
                     progress(grant.transactionId, stage)
                 }
+                override fun onPairingComplete(errorCode: Long) {
+                    android.util.Log.i("RhophiCommissioning", "Pairing complete errorCode=$errorCode")
+                    if (errorCode != 0L && !completion.isCompleted) {
+                        completion.completeExceptionally(IllegalStateException("Matter PASE pairing failed: $errorCode"))
+                    }
+                }
+                override fun onCommissioningStatusUpdate(nodeId: Long, stage: String, errorCode: Long) {
+                    android.util.Log.i("RhophiCommissioning", "Commissioning stage=$stage errorCode=$errorCode")
+                }
                 override fun onCommissioningComplete(nodeId: Long, errorCode: Long) {
+                    android.util.Log.i("RhophiCommissioning", "Commissioning complete nodeId=$nodeId errorCode=$errorCode attestation=$attestationVerified")
                     if (errorCode == 0L && attestationVerified) completion.complete(nodeId)
-                    else completion.completeExceptionally(IllegalStateException("Matter commissioning failed"))
+                    else completion.completeExceptionally(IllegalStateException("Matter commissioning failed: $errorCode"))
+                }
+                override fun onNotifyChipConnectionClosed() {
+                    android.util.Log.i("RhophiCommissioning", "CHIP BLE connection closed")
+                }
+                override fun onCloseBleComplete() {
+                    android.util.Log.i("RhophiCommissioning", "CHIP BLE close complete")
                 }
                 override fun onError(error: Throwable) { completion.completeExceptionally(error) }
             })

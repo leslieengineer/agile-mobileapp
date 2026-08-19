@@ -29,6 +29,7 @@ export interface CommissioningProgressEvent {
 export interface RhophiCommissioningPlugin {
   generateEphemeralKey(options: { transactionHint: string }): Promise<{ publicKey: string; keyId: string }>
   scanDevices(options: { timeoutMs: number }): Promise<{ devices: NativeDiscoveredDevice[] }>
+  readIdentity(options: { address: string }): Promise<Omit<NativeDiscoveredDevice, 'address' | 'rssi'>>
   identifyDevice(options: { address: string }): Promise<void>
   claimDevice(options: { address: string; challenge: string }): Promise<{
     deviceNonce: string

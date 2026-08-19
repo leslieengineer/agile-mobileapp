@@ -13,6 +13,7 @@ class RhophiCommissioningPlugin : Plugin() {
 
     @PluginMethod fun generateEphemeralKey(call: PluginCall) = unavailable(call)
     @PluginMethod fun scanDevices(call: PluginCall) = unavailable(call)
+    @PluginMethod fun readIdentity(call: PluginCall) = unavailable(call)
     @PluginMethod fun identifyDevice(call: PluginCall) = unavailable(call)
     @PluginMethod fun claimDevice(call: PluginCall) = unavailable(call)
     @PluginMethod fun commissionBle(call: PluginCall) = unavailable(call)

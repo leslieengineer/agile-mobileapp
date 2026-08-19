@@ -7,6 +7,7 @@ class UnavailableCommissioningService implements CommissioningService {
   private unavailable(): never { throw new Error('Commissioning requires the native Android build') }
   async createEphemeralKey(): Promise<never> { return this.unavailable() }
   async scanDevices(): Promise<never> { return this.unavailable() }
+  async readIdentity(): Promise<never> { return this.unavailable() }
   async identifyDevice(): Promise<never> { return this.unavailable() }
   async claimDevice(): Promise<never> { return this.unavailable() }
   async commissionBle(): Promise<never> { return this.unavailable() }

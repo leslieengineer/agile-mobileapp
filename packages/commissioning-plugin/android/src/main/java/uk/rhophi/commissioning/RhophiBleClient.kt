@@ -179,9 +179,21 @@ internal class RhophiBleClient(
             else if (newState == BluetoothProfile.STATE_DISCONNECTED) disconnected()
         }
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            chip.onServicesDiscovered(gatt, status)
-            if (status != BluetoothGatt.GATT_SUCCESS || gatt.getService(RhophiWire.service) == null) {
-                ready.completeExceptionally(IllegalStateException("Rhophi GATT service unavailable"))
+            // Log ra để debug: In toàn bộ các service đang thấy ra logcat
+            gatt.services.forEach { 
+                android.util.Log.d("RHOPHI_GATT", "Found Service: ${it.uuid}") 
+            }
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                ready.completeExceptionally(IllegalStateException("GATT discovery failed"))
+                return
+            }
+
+            // Ép tìm chính xác cái UUID đó
+            val rhophiService = gatt.getService(UUID.fromString("4948504f-4852-31a1-414f-218e10527d9a"))
+            
+            if (rhophiService == null) {
+                ready.completeExceptionally(IllegalStateException("Rhophi GATT service unavailable (UUID mismatch)"))
             } else {
                 gatt.requestMtu(247)
             }

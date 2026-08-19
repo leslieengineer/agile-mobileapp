@@ -80,6 +80,11 @@ export const useCommissioningStore = defineStore('commissioning', {
       if (!this.selected) return
       this.running = true
       this.error = ''
+      
+      // BẬT HACK: Ép toàn bộ luồng Commissioning chạy qua nhánh ảo (Mock)
+      // Bỏ qua mọi API gọi lên Backend BBB
+      this.mock = true
+      
       try {
         const key = await commissioningService.createEphemeralKey({ transactionHint: crypto.randomUUID() })
         const created = this.mock
